@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>街頭大廚：雞蛋仔專賣店 🍳</title>
+  <style>
+    body {
+      font-family: "PingFang HK", "Microsoft JhengHei", sans-serif;
+      background-color: #fff8e7;
+      text-align: center;
+      margin: 0;
+      padding: 15px;
+    }
+    h1 { color: #d35400; margin-bottom: 5px; }
+    .game-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    .status-bar {
+      display: flex;
+      justify-content: space-around;
+      font-size: 16px;
+      font-weight: bold;
+      color: #e67e22;
+      background: #fff3e0;
+      padding: 10px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+    }
+    /* 顧客訂單與 Combo 區 */
+    .order-box {
+      background: #ffe0b2;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #d84315;
+      margin-bottom: 12px;
+      border: 2px dashed #f57c00;
+    }
+    .combo-badge {
+      color: #c0392b;
+      font-size: 15px;
+      margin-top: 4px;
+    }
+    /* 雞蛋仔模具外觀 */
+    .pan {
+      width: 200px;
+      height: 200px;
+      background-color: #444;
+      border-radius: 50%;
+      margin: 15px auto;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+      padding: 16px;
+      box-sizing: border-box;
+      transition: transform 0.6s ease;
+      box-shadow: inset 0 0 10px #000;
+    }
+    .bubble {
+      background-color: #222;
+      border-radius: 50%;
+      transition: background-color 0.4s ease;
+    }
+    /* 口味顏色 */
+    .bubble.raw-original { background-color: #fff3a0; }
+    .bubble.raw-matcha { background-color: #a8e6cf; }
+    .bubble.raw-choco { background-color: #d7ccc8; }
+    /* 熟度顏色 */
+    .bubble.perfect { background-color: #e67e22 !important; }
+    .bubble.burnt { background-color: #3e2723 !important; }
+
+    /* 進度條 */
+    .progress-container {
+      width: 80%;
+      height: 14px;
+      background-color: #ddd;
+      border-radius: 7px;
+      margin: 10px auto;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background-color: #4caf50;
+      transition: width 0.2s linear;
+    }
+    
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 15px;
+    }
+    button {
+      padding: 9px 15px;
+      font-size: 15px;
+      border: none;
+      border-radius: 8px;
+      background-color: #f39c12;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    button:disabled { background-color: #ccc; cursor: not-allowed; }
+    button:hover:not(:disabled) { background-color: #d35400; }
+    .flavor-btn { background-color: #8e44ad; }
+    .flavor-btn.active { outline: 3px solid #2980b9; background-color: #6c3483; }
+
+    .status-msg {
+      margin-top: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      min-height: 24px;
+      color: #333;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="game-container">
+    <h1>🧇 街頭雞蛋仔大作戰</h1>
+    
+    <div class="status-bar">
+      <div>⏳ 時間: <span id="timeLeft">60</span>s</div>
+      <div>💰 營業額: $<span id="score">0</span></div>
+    </div>
+
+    <div class="order-box" id="orderBox">
+      點擊「開始營業」挑戰最高紀錄！
+      <div class="combo-badge" id="comboBadge"></div>
+    </div>
+
+    <!-- 烤盤 -->
+    <div class="pan" id="pan">
+      <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+      <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+      <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+      <div class="bubble"></div><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div>
+    </div>
+
+    <!-- 烘烤進度條 -->
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="status-msg" id="statusMsg">請點擊開始遊戲</div>
+
+    <!-- 操作按鈕 -->
+    <div class="btn-group">
+      <button id="startBtn" onclick="startGame()">▶️ 開始營業</button>
+    </div>
+
+    <div class="btn-group" id="gameControls" style="display:none;">
+      <button class="flavor-btn active" id="btn-original" onclick="selectFlavor('original')">🥞 原味</button>
+      <button class="flavor-btn" id="btn-matcha" onclick="selectFlavor('matcha')">🍵 抹茶</button>
+      <button class="flavor-btn" id="btn-choco" onclick="selectFlavor('choco')">🍫 朱古力</button>
+      <button id="pourBtn" onclick="pourBatter()">🫗 倒麵糊</button>
+      <button id="flipBtn" onclick="flipPan()" disabled>🔄 翻轉烘烤</button>
+      <button id="serveBtn" onclick="serveEggette()" disabled>🍽️ 出爐給顧客</button>
+    </div>
+  </div>
+
+  <script>
+    const flavors = {
+      original: { name: '原味', class: 'raw-original' },
+      matcha: { name: '抹茶', class: 'raw-matcha' },
+      choco: { name: '朱古力', class: 'raw-choco' }
+    };
+
+    let score = 0;
+    let timeLeft = 60;
+    let combo = 0;
+    let gameTimer = null;
+    let bakeTimer = null;
+    let bakeProgress = 0;
+    let currentFlavor = 'original';
+    let currentOrder = '';
+    let isFlipped = false;
+    let isPlaying = false;
+
+    const pan = document.getElementById('pan');
+    const bubbles = document.querySelectorAll('.bubble');
+    const statusMsg = document.getElementById('statusMsg');
+    const scoreDisplay = document.getElementById('score');
+    const timeLeftDisplay = document.getElementById('timeLeft');
+    const orderBox = document.getElementById('orderBox');
+    const comboBadge = document.getElementById('comboBadge');
+    const progressBar = document.getElementById('progressBar');
+
+    const pourBtn = document.getElementById('pourBtn');
+    const flipBtn = document.getElementById('flipBtn');
+    const serveBtn = document.getElementById('serveBtn');
+
+    function startGame() {
+      score = 0;
+      timeLeft = 60;
+      combo = 0;
+      isPlaying = true;
+      scoreDisplay.innerText = score;
+      timeLeftDisplay.innerText = timeLeft;
+      comboBadge.innerText = "";
+      
+      document.getElementById('startBtn').style.display = 'none';
+      document.getElementById('gameControls').style.display = 'flex';
+
+      nextOrder();
+      resetPan();
+
+      gameTimer = setInterval(() => {
+        timeLeft--;
+        timeLeftDisplay.innerText = timeLeft;
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    function nextOrder() {
+      const keys = Object.keys(flavors);
+      currentOrder = keys[Math.floor(Math.random() * keys.length)];
+      orderBox.innerHTML = `🙋‍♂️ 顧客想要：【${flavors[currentOrder].name}雞蛋仔】！<div class="combo-badge" id="comboBadge">${combo > 1 ? '🔥 連擊 x' + combo + '！' : ''}</div>`;
+    }
+
+    function selectFlavor(flavor) {
+      currentFlavor = flavor;
+      document.querySelectorAll('.flavor-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById(`btn-${flavor}`).classList.add('active');
+    }
+
+    function pourBatter() {
+      bubbles.forEach(b => {
+        b.className = 'bubble ' + flavors[currentFlavor].class;
+      });
+      statusMsg.innerText = "麵糊倒好了！快點「翻轉烘烤」！";
+      pourBtn.disabled = true;
+      flipBtn.disabled = false;
+    }
+
+    function flipPan() {
+      isFlipped = !isFlipped;
+      pan.style.transform = isFlipped ? 'rotate(180deg)' : 'rotate(0deg)';
+      statusMsg.innerText = "烘烤中... 注意看進度條（綠色區域完美）！";
+      flipBtn.disabled = true;
+      serveBtn.disabled = false;
+
+      bakeProgress = 0;
+      bakeTimer = setInterval(() => {
+        bakeProgress += 5;
+        progressBar.style.width = bakeProgress + '%';
+
+        if (bakeProgress >= 50 && bakeProgress <= 80) {
+          progressBar.style.backgroundColor = '#4caf50';
+          bubbles.forEach(b => b.classList.add('perfect'));
+        } else if (bakeProgress > 80) {
+          progressBar.style.backgroundColor = '#e74c3c';
+          bubbles.forEach(b => b.classList.add('burnt'));
+        }
+      }, 180);
+    }
+
+    function serveEggette() {
+      clearInterval(bakeTimer);
+      serveBtn.disabled = true;
+
+      let resultMsg = "";
+      let earned = 0;
+      const isCorrectFlavor = (currentFlavor === currentOrder);
+      
+      if (bakeProgress < 50) {
+        resultMsg = "❌ 太早出爐，沒熟！($0)";
+        combo = 0;
+      } else if (bakeProgress > 80) {
+        resultMsg = "😭 烤焦了！顧客很生氣！(-$20)";
+        earned = -20;
+        combo = 0;
+      } else if (!isCorrectFlavor) {
+        resultMsg = `😅 口味做錯了！要${flavors[currentOrder].name}！(+$20)`;
+        earned = 20;
+        combo = 0;
+      } else {
+        combo++;
+        let bonus = (combo > 1) ? combo * 20 : 0;
+        earned = 100 + bonus;
+        resultMsg = `🎉 完美！口味與火候極佳！(+$100 ${bonus > 0 ? ', 連擊獎勵 +$' + bonus : ''})`;
+      }
+
+      score += earned;
+      if (score < 0) score = 0;
+      scoreDisplay.innerText = score;
+      statusMsg.innerText = resultMsg;
+
+      setTimeout(() => {
+        if (isPlaying) {
+          nextOrder();
+          resetPan();
+        }
+      }, 1500);
+    }
+
+    function resetPan() {
+      bakeProgress = 0;
+      progressBar.style.width = '0%';
+      progressBar.style.backgroundColor = '#4caf50';
+      pan.style.transform = 'rotate(0deg)';
+      isFlipped = false;
+      bubbles.forEach(b => b.className = 'bubble');
+      
+      pourBtn.disabled = false;
+      flipBtn.disabled = true;
+      serveBtn.disabled = true;
+      statusMsg.innerText = "請選擇口味並倒入麵糊。";
+    }
+
+    function endGame() {
+      isPlaying = false;
+      clearInterval(gameTimer);
+      clearInterval(bakeTimer);
+      
+      let title = "實習小當家";
+      if (score >= 800) title = "🏆 雞蛋仔傳奇大師";
+      else if (score >= 500) title = "🌟 街頭人氣名廚";
+      else if (score >= 200) title = "👨‍🍳 熟練小廚師";
+
+      orderBox.innerHTML = `⏰ 營業時間結束！獲得稱號：<br><b>【${title}】</b>`;
+      statusMsg.innerText = `🎉 最終營業額：$${score} 元！`;
+      
+      document.getElementById('startBtn').innerText = "🔄 再次挑戰";
+      document.getElementById('startBtn').style.display = 'inline-block';
+      document.getElementById('gameControls').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
